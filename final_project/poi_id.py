@@ -38,14 +38,14 @@ from tester import dump_classifier_and_data
 ### preliminary feature list looks like this
 features_list = [
     'poi',                          # Target variable
-    'salary',                       # FEATURE: medium correlation to poi in heatmap analysis
-    'bonus',                        # FEATURE: medium correlation to poi in heatmap analysis
-    'total_payments',               # FEATURE: medium correlation to poi in heatmap analysis
-    'total_stock_value',            # FEATURE: STRONG correlation to poi in heatmap analysis
-    'exercised_stock_options',      # FEATURE: STRONG correlation to poi in heatmap analysis
-    'long_term_incentive',          # FEATURE: medium correlation to poi in heatmap analysis
-    'shared_receipt_with_poi',      # FEATURE: medium correlation to poi in heatmap analysis
-    'restricted_stock',             # FEATURE: medium correlation to poi in heatmap analysis
+    'salary',                       
+    'bonus',                        
+    #'total_payments',               # feature reduces precision in tester.py
+    'total_stock_value',            
+    'exercised_stock_options',      
+    'long_term_incentive',          
+    'shared_receipt_with_poi',      
+    'restricted_stock',            
     'from_this_person_to_poi',
     'from_messages',
 ] 
@@ -111,6 +111,7 @@ features_list += ['pct_to_poi'] # 'total_stock_value_vs_exercised'] # 'exercised
 # plt.title('Correlation Matrix')
 # plt.show()
 
+
 # Convert the DataFrame back to a dictionary for featureFormat
 data_dict = df_cleaned.to_dict(orient='index')
 
@@ -121,11 +122,40 @@ y, X = targetFeatureSplit(data)
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, shuffle=True)
 
-# Convert to NumPy arrays
-X_train = np.array(X_train)
-X_test = np.array(X_test)
-y_train = np.array(y_train)
-y_test = np.array(y_test)
+### Trying to find the best features
+
+# Standardize the features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Import LogisticRegression
+from sklearn.linear_model import LogisticRegression
+
+# Instantiate a logistic regression model with L1 regularization
+log_reg = LogisticRegression(penalty='l1', solver='liblinear', C=1.0, random_state=42)
+
+# Fit the model to the training data
+log_reg.fit(X_train_scaled, y_train)
+
+# Compute and print the coefficients
+log_reg_coef = log_reg.coef_[0]
+
+# Plot the coefficients
+feature_names = features_list[1:]  # Exclude 'poi' which is the target variable
+plt.bar(feature_names, log_reg_coef)
+plt.xticks(rotation=45)
+plt.xlabel('Features')
+plt.ylabel('Coefficient Value')
+plt.title('Logistic Regression Coefficients with L1 Regularization')
+plt.show()
+
+# Evaluate the model
+y_pred = log_reg.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy:.3f}")
+print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
 
 # Create a custom transformer for outlier detection
 class OutlierDetector(BaseEstimator, TransformerMixin):
@@ -179,7 +209,7 @@ param_grid = [
 ]
 
 # Using cross-validation to get a more robust estimate of model performance
-cv = StratifiedKFold(n_splits=30, shuffle=True, random_state=42)
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 # Set up GridSearchCV
 grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=cv, scoring='f1', n_jobs=-1)
