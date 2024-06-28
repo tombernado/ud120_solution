@@ -21,7 +21,8 @@ from sklearn.svm import SVC
 from sklearn.ensemble import IsolationForest
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
+
 sys.path.append(os.path.abspath(("../tools/")))
 from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data
@@ -40,7 +41,7 @@ features_list = [
     'poi',                          # Target variable
     'salary',                       
     'bonus',                        
-    #'total_payments',               # feature reduces precision in tester.py
+    'total_payments',               # feature reduces precision in tester.py
     'total_stock_value',            
     'exercised_stock_options',      
     'long_term_incentive',          
@@ -211,17 +212,21 @@ param_grid = [
 # Using cross-validation to get a more robust estimate of model performance
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-# Set up GridSearchCV
-grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=cv, scoring='f1', n_jobs=-1)
+# # Set up GridSearchCV or RandomSearchCV
+# grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=cv, scoring='f1', n_jobs=-1)
+
+# # Fit the model
+# grid_search.fit(X_train, y_train)
+random_search = RandomizedSearchCV(estimator=pipeline, param_distributions=param_grid, n_iter=100, cv=cv, scoring='f1', n_jobs=-1, random_state=42)
 
 # Fit the model
-grid_search.fit(X_train, y_train)
+random_search.fit(X_train, y_train)
 
 # Print the best parameters
-print(f"Best parameters found: {grid_search.best_params_}")
+print(f"Best parameters found: {random_search.best_params_}")
 
 # Use the best estimator
-best_clf = grid_search.best_estimator_
+best_clf = random_search.best_estimator_
 
 ### Best parameters found: {'classifier': RandomForestClassifier(bootstrap=False, n_estimators=50, random_state=42), 'classifier__bootstrap': False, 
 # 'classifier__max_depth': None, 'classifier__max_features': 'sqrt', 'classifier__min_samples_leaf': 1, 'classifier__min_samples_split': 2, 
