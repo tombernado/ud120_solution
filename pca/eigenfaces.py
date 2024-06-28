@@ -64,7 +64,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random
 ###############################################################################
 # Compute a PCA (eigenfaces) on the face dataset (treated as unlabeled
 # dataset): unsupervised feature extraction / dimensionality reduction
-n_components = 150
+n_components = 15
 
 print("Extracting the top %d eigenfaces from %d faces" % (n_components, X_train.shape[0]))
 t0 = time()
@@ -86,7 +86,7 @@ print("Fitting the classifier to the training set")
 t0 = time()
 param_grid = {
           'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-          'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+          'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1], # [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1]
           }
 # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
 clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
@@ -141,3 +141,7 @@ eigenface_titles = ["eigenface %d" % i for i in range(eigenfaces.shape[0])]
 plot_gallery(eigenfaces, eigenface_titles, h, w)
 
 pl.show()
+
+# Print the percentage of variance explained by the first principal component
+variance_explained_by_first_pc = pca.explained_variance_ratio_[:2]
+print(variance_explained_by_first_pc)
