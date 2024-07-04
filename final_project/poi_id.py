@@ -41,7 +41,7 @@ features_list = [
     'poi',                          # Target variable
     'salary',                       
     'bonus',                        
-    'total_payments',               # feature reduces precision in tester.py
+    'total_payments',               
     'total_stock_value',            
     'exercised_stock_options',      
     'long_term_incentive',          
