@@ -70,6 +70,8 @@ data_dict.pop('WHITE JR THOMAS E') # very high total_stock_value
 # get rid of their dict/list structure and use dataframe
 df = pd.DataFrame.from_dict(data_dict, orient='index')
 
+# print(df.isna().sum().sort_values())
+
 # Identify columns that should not be converted to float
 exclude_columns = ['email_address', 'poi']
 
@@ -100,7 +102,7 @@ features_list.remove('from_messages')
 # Add new features to the features list
 features_list += ['pct_to_poi'] # 'total_stock_value_vs_exercised'] # 'exercised_stock_options_plus_total_stock_value' ] #, 'log_bonus', 'bonus_to_salary', 'total_payments_to_salary', 'stock_options_to_total_stock']
 
-# Compute the correlation matrix
+# # Compute the correlation matrix
 # correlation_matrix = df_cleaned[features_list].corr()
 
 # ### Display the correlation matrix
@@ -123,54 +125,6 @@ y, X = targetFeatureSplit(data)
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, shuffle=True)
 
-### Trying to find the best features
-
-# Standardize the features
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# Import LogisticRegression
-from sklearn.linear_model import LogisticRegression
-
-# Instantiate a logistic regression model with L1 regularization
-log_reg = LogisticRegression(penalty='l1', solver='liblinear', C=1.0, random_state=42)
-
-# Fit the model to the training data
-log_reg.fit(X_train_scaled, y_train)
-
-# Compute and print the coefficients
-log_reg_coef = log_reg.coef_[0]
-
-# Plot the coefficients
-feature_names = features_list[1:]  # Exclude 'poi' which is the target variable
-plt.bar(feature_names, log_reg_coef)
-plt.xticks(rotation=45)
-plt.xlabel('Features')
-plt.ylabel('Coefficient Value')
-plt.title('Logistic Regression Coefficients with L1 Regularization')
-plt.show()
-
-# Evaluate the model
-y_pred = log_reg.predict(X_test_scaled)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Accuracy: {accuracy:.3f}")
-print(classification_report(y_test, y_pred))
-print(confusion_matrix(y_test, y_pred))
-
-# Create a custom transformer for outlier detection
-class OutlierDetector(BaseEstimator, TransformerMixin):
-    def __init__(self, contamination=0.1):
-        self.contamination = contamination
-        self.clf = IsolationForest(contamination=self.contamination)
-
-    def fit(self, X, y=None):
-        self.clf.fit(X)
-        return self
-
-    def transform(self, X):
-        outlier_labels = self.clf.predict(X)
-        return np.column_stack((X, outlier_labels == -1))
 
 # Define the pipeline
 pipeline = Pipeline([
@@ -185,8 +139,8 @@ pipeline = Pipeline([
 # Set up the parameter grid to search
 param_grid = [
     {
-        'selector__percentile': [20, 30, 40],
-        'pca__n_components': [2, 3, 4],
+        'selector__percentile': [30, 40],
+        'pca__n_components': [2, 3],
         'classifier': [RandomForestClassifier(random_state=42)],
         'classifier__n_estimators': [50, 100],
         'classifier__max_features': ['sqrt'],
@@ -213,20 +167,20 @@ param_grid = [
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 # # Set up GridSearchCV or RandomSearchCV
-# grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=cv, scoring='f1', n_jobs=-1)
+grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=cv, scoring='f1', n_jobs=-1)
 
 # # Fit the model
 # grid_search.fit(X_train, y_train)
-random_search = RandomizedSearchCV(estimator=pipeline, param_distributions=param_grid, n_iter=100, cv=cv, scoring='f1', n_jobs=-1, random_state=42)
+# random_search = RandomizedSearchCV(estimator=pipeline, param_distributions=param_grid, n_iter=100, cv=cv, scoring='f1', n_jobs=-1, random_state=42)
 
 # Fit the model
-random_search.fit(X_train, y_train)
+grid_search.fit(X_train, y_train)
 
 # Print the best parameters
-print(f"Best parameters found: {random_search.best_params_}")
+print(f"Best parameters found: {grid_search.best_params_}")
 
 # Use the best estimator
-best_clf = random_search.best_estimator_
+best_clf = grid_search.best_estimator_
 
 ### Best parameters found: {'classifier': RandomForestClassifier(bootstrap=False, n_estimators=50, random_state=42), 'classifier__bootstrap': False, 
 # 'classifier__max_depth': None, 'classifier__max_features': 'sqrt', 'classifier__min_samples_leaf': 1, 'classifier__min_samples_split': 2, 
